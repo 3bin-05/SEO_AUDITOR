@@ -71,6 +71,112 @@ def health():
     """Simple health check route."""
     return jsonify({"status": "ok"}), 200
 
+@app.route('/', methods=['GET'])
+def index():
+    """Home landing page for the bot service."""
+    bot_username = "bot"
+    if telegram_app and telegram_app.bot:
+        try:
+            # Try to get the username of the bot dynamically
+            bot_username = telegram_app.bot.username or "bot"
+        except Exception:
+            pass
+    tg_link = f"https://t.me/{bot_username}"
+    
+    return f"""
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>SEO Auditor Bot</title>
+        <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
+        <style>
+            body {{
+                margin: 0;
+                font-family: 'Outfit', sans-serif;
+                background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%);
+                color: #f8fafc;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+                min-height: 100vh;
+                text-align: center;
+            }}
+            .container {{
+                z-index: 10;
+                padding: 2rem;
+                max-width: 600px;
+            }}
+            h1 {{
+                font-size: 3rem;
+                font-weight: 800;
+                margin: 0 0 1rem 0;
+                background: linear-gradient(to right, #38bdf8, #818cf8);
+                -webkit-background-clip: text;
+                -webkit-text-fill-color: transparent;
+            }}
+            p {{
+                font-size: 1.2rem;
+                color: #94a3b8;
+                line-height: 1.6;
+                margin: 0 0 2.5rem 0;
+            }}
+            .btn {{
+                display: inline-block;
+                background: linear-gradient(to right, #6366f1, #4f46e5);
+                color: white;
+                text-decoration: none;
+                padding: 0.8rem 2rem;
+                border-radius: 50px;
+                font-weight: 600;
+                font-size: 1.1rem;
+                box-shadow: 0 4px 15px rgba(99, 102, 241, 0.4);
+                transition: transform 0.2s, box-shadow 0.2s;
+            }}
+            .btn:hover {{
+                transform: translateY(-2px);
+                box-shadow: 0 6px 20px rgba(99, 102, 241, 0.6);
+            }}
+            .status {{
+                margin-top: 3rem;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                gap: 0.5rem;
+                font-size: 0.9rem;
+                color: #10b981;
+            }}
+            .dot {{
+                width: 8px;
+                height: 8px;
+                background-color: #10b981;
+                border-radius: 50%;
+                box-shadow: 0 0 10px #10b981;
+                animation: pulse 2s infinite;
+            }}
+            @keyframes pulse {{
+                0% {{ transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }}
+                70% {{ transform: scale(1); box-shadow: 0 0 0 10px rgba(16, 185, 129, 0); }}
+                100% {{ transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }}
+            }}
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <h1>SEO Auditor Bot</h1>
+            <p>Your ultimate on-page SEO analyzer. Get instant scoring, element hierarchy checks, alt-text analysis, and detailed recommendations right inside Telegram.</p>
+            <a href="{tg_link}" class="btn" target="_blank">Open in Telegram</a>
+            <div class="status">
+                <span class="dot"></span>
+                <span>Bot Service is Active</span>
+            </div>
+        </div>
+    </body>
+    </html>
+    """
+
 @app.route('/webhook', methods=['POST'])
 def webhook():
     """Telegram webhook endpoint."""
