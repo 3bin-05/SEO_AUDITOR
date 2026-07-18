@@ -1,0 +1,36 @@
+# Python compilation cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Virtual Environments
+venv/
+.venv/
+env/
+ENV/
+
+# Sensitive Environment Configurations & Credentials
+.env
+*.json
+!app.json
+!package.json
+!tsconfig.json
+!firebase.json
+!.github/**/*.json
+
+# Specifically ignore the Firebase service account JSON credentials
+*firebase-adminsdk*.json
+
+# OS and System files
+.DS_Store
+Thumbs.db
+
+# IDE and Project config directories
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?

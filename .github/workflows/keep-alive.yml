@@ -1,0 +1,37 @@
+name: Render Web Service Keep-Alive
+
+on:
+  schedule:
+    - cron: '*/10 * * * *'
+  workflow_dispatch:
+
+jobs:
+  keep-alive:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Send Keep-Alive Request
+        run: |
+          URL="${{ secrets.RENDER_APP_URL }}"
+          if [ -z "$URL" ]; then
+            echo "Error: RENDER_APP_URL repository secret is not configured."
+            echo "Please set it under: Settings -> Secrets and variables -> Actions -> New repository secret"
+            exit 1
+          fi
+          
+          # Remove trailing slash if present
+          URL="${URL%/}"
+          
+          echo "Sending keep-alive request to: $URL/health at $(date -u)"
+          
+          # Perform curl request:
+          # -s: Silent mode (suppress progress bar)
+          # -f: Fail silently on server errors (returns non-zero exit status)
+          # -o /dev/null: Discard response body output
+          # -w "%{http_code}": Write out the HTTP status code
+          # --max-time 20: 20-second connection timeout limit
+          # --retry 3: Retry up to 3 times on transient errors
+          # --retry-delay 5: Delay 5 seconds between retries (allows for cold starts)
+          HTTP_STATUS=$(curl -s -f -o /dev/null -w "%{http_code}" --max-time 20 --retry 3 --retry-delay 5 "$URL/health")
+          
+          echo "Response HTTP Status: $HTTP_STATUS"
+          echo "Keep-alive completed successfully at $(date -u)"
