@@ -91,18 +91,52 @@ http://127.0.0.1:5000/health
 
 ## 3. Registering the Webhook
 
-After deploying your server to Render, you must register its URL with Telegram's Webhook API so it forwards updates to your bot.
+> [!IMPORTANT]
+> Registering the webhook is a **manual, one-time step** required after the initial deployment, whenever the service URL changes, or if the `WEBHOOK_SECRET`/`BOT_TOKEN` is rotated. The Render deployment does **not** register the webhook automatically.
 
-Run the helper script from your terminal (ensure virtual environment is active):
+Run the helper script from your terminal (ensure your virtual environment is active):
 ```bash
-python scripts/set_webhook.py <your-deployed-service-url>/webhook
+python scripts/set_webhook.py <your-deployed-service-url>
 ```
+*Note: The script will automatically ensure the URL ends with `/webhook`.*
+
 *Example:*
 ```bash
-python scripts/set_webhook.py https://seo-auditor-bot.onrender.com/webhook
+python scripts/set_webhook.py https://seo-auditor-bot.onrender.com
 ```
 
 ---
+
+## 3.1. Webhook Troubleshooting
+
+If the bot is running but not responding to messages, or if updates are not reaching the server:
+
+### 1. Check Webhook Status
+Run the diagnostic script to query the Telegram Bot API and print the active webhook configuration and error logs:
+```bash
+python scripts/check_webhook.py
+```
+
+A healthy response looks like:
+```
+=== Telegram Webhook Info ===
+URL:                  https://seo-auditor-bot.onrender.com/webhook
+Has Custom Cert:      False
+Pending Updates:      0
+Max Connections:      40
+Allowed Updates:      All
+Last Error Message:   None
+Last Error Date:      None
+```
+
+### 2. Diagnose & Resolve Common Issues
+* **Pending Updates > 0 & Last Error Message contains errors:**
+  - Verify that the web service is active (not spun down on Render's free tier) and that the URL is correct.
+* **Webhook Secret Token Mismatches:**
+  - If the Render logs contain warning messages like `Webhook secret token mismatch! Expected prefix: 'abc...', Received header prefix: 'xyz...'`, the secret token registered on Telegram's servers does not match the `WEBHOOK_SECRET` environment variable on Render.
+  - Re-run `python scripts/set_webhook.py <url>` locally (ensuring your local `.env` matches the deployed `WEBHOOK_SECRET` env var) to re-register the webhook with the correct secret token.
+* **Cold Starts:**
+  - If the bot is slow to respond after inactivity, it may be due to Render's free tier spin-down. Ensure the GitHub Actions keep-alive workflow is configured.
 
 ## 4. Deploying Firestore Security Rules
 

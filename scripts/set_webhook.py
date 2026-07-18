@@ -12,7 +12,14 @@ def main():
         print("Example: python set_webhook.py https://my-app.render.com/webhook")
         sys.exit(1)
         
-    webhook_url = sys.argv[1]
+    webhook_url = sys.argv[1].strip()
+    if not webhook_url.endswith("/webhook"):
+        if webhook_url.endswith("/"):
+            webhook_url = webhook_url + "webhook"
+        else:
+            webhook_url = webhook_url + "/webhook"
+        print(f"Warning: Webhook URL did not end in /webhook. Auto-adjusted to: {webhook_url}")
+        
     bot_token = os.getenv("BOT_TOKEN")
     secret_token = os.getenv("WEBHOOK_SECRET")
     
