@@ -1,7 +1,8 @@
 import os
 import hmac
+import time
 import asyncio
-from threading import Thread
+from threading import Thread, Lock
 from flask import Flask, jsonify, request
 from dotenv import load_dotenv
 from telegram import Update
@@ -34,10 +35,12 @@ print("===========================")
 # Global containers for telegram application and loop
 telegram_app = None
 loop = None
+telegram_bot_ready = False
+init_lock = Lock()
 
 def start_telegram_loop():
     """Initializes and runs the asyncio event loop for python-telegram-bot in a background thread."""
-    global telegram_app, loop
+    global telegram_app, loop, telegram_bot_ready
     if not BOT_TOKEN:
         print("BOT_TOKEN not set; skipping Telegram Bot initialization.")
         return
@@ -55,16 +58,44 @@ def start_telegram_loop():
             
         loop.run_until_complete(init_and_start())
         print("Telegram bot application initialized and started successfully.")
+        telegram_bot_ready = True
         loop.run_forever()
     except Exception as e:
         print(f"Failed to start telegram bot background loop: {e}")
 
-# Start the background thread if bot token is provided
-if BOT_TOKEN:
-    bot_thread = Thread(target=start_telegram_loop, daemon=True)
-    bot_thread.start()
-else:
-    print("Warning: BOT_TOKEN env var is missing. Webhook will return 500 error if hit.")
+def ensure_telegram_initialized():
+    """Thread-safe lazy initialization of the Telegram bot background loop inside Gunicorn workers."""
+    global telegram_app, telegram_bot_ready
+    if telegram_bot_ready and telegram_app is not None:
+        return
+        
+    with init_lock:
+        if telegram_bot_ready and telegram_app is not None:
+            return
+            
+        if not BOT_TOKEN:
+            return
+            
+        print("Initializing Telegram bot lazily in Gunicorn worker process...")
+        try:
+            bot_thread = Thread(target=start_telegram_loop, daemon=True)
+            bot_thread.start()
+            
+            # Wait for bot to be ready (timeout 5s)
+            start_time = time.time()
+            while not telegram_bot_ready and (time.time() - start_time) < 5.0:
+                time.sleep(0.1)
+                
+            if not telegram_bot_ready:
+                print("Warning: Telegram bot lazy initialization timed out in background thread.")
+            else:
+                print("Telegram bot lazy initialization completed successfully.")
+        except Exception as e:
+            print(f"Failed to start telegram bot background thread: {e}")
+
+@app.before_request
+def before_request():
+    ensure_telegram_initialized()
 
 @app.route('/health', methods=['GET'])
 def health():
@@ -76,6 +107,7 @@ def health():
         "webhook_secret_present": WEBHOOK_SECRET is not None and len(WEBHOOK_SECRET) > 0,
         "webhook_secret_prefix": WEBHOOK_SECRET[:3] if WEBHOOK_SECRET else None,
         "telegram_app_initialized": telegram_app is not None,
+        "telegram_bot_ready": telegram_bot_ready,
         "asyncio_loop_running": loop is not None and loop.is_running() if loop else False
     }), 200
 
@@ -188,7 +220,7 @@ def index():
 @app.route('/webhook', methods=['POST'])
 def webhook():
     """Telegram webhook endpoint."""
-    if not telegram_app:
+    if not telegram_app or not telegram_bot_ready:
         return jsonify({"error": "Bot application not initialized"}), 500
         
     # Verify Secret Token if WEBHOOK_SECRET is set
