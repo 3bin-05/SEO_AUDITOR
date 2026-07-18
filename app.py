@@ -68,8 +68,16 @@ else:
 
 @app.route('/health', methods=['GET'])
 def health():
-    """Simple health check route."""
-    return jsonify({"status": "ok"}), 200
+    """Detailed health check route for debugging initialization status."""
+    return jsonify({
+        "status": "ok",
+        "bot_token_present": BOT_TOKEN is not None and len(BOT_TOKEN) > 0,
+        "bot_token_prefix": BOT_TOKEN[:10] if BOT_TOKEN else None,
+        "webhook_secret_present": WEBHOOK_SECRET is not None and len(WEBHOOK_SECRET) > 0,
+        "webhook_secret_prefix": WEBHOOK_SECRET[:3] if WEBHOOK_SECRET else None,
+        "telegram_app_initialized": telegram_app is not None,
+        "asyncio_loop_running": loop is not None and loop.is_running() if loop else False
+    }), 200
 
 @app.route('/', methods=['GET'])
 def index():
